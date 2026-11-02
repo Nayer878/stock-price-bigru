@@ -1,152 +1,145 @@
-# Stock Price Prediction Using BiGRU and Time Series Cross-Validation
+# Portfolio Optimization with BiGRU Price Forecasts and the Markowitz Model
 
 ## Overview
 
-This project explores the use of a Bidirectional Gated Recurrent Unit (BiGRU) neural network for time series forecasting, focusing on Apple Inc. (AAPL) stock closing prices.
+This repository contains the code and data behind my Master's thesis (M2, Université de Fianarantsoa, 2023–2024):
 
-The main objective is to evaluate the ability of a deep learning model to capture temporal patterns in historical stock price data.
+> *Optimisation de portefeuille : une approche hybride intégrant l'apprentissage profond au modèle moyenne-variance de Markowitz*
 
-To obtain a more realistic assessment, the project uses time series cross-validation, preserving the chronological order of observations during model evaluation.
+The project combines two steps:
 
-## Project Objectives
-
-* Build a deep learning model based on Bidirectional GRU layers for stock price forecasting.
-* Investigate the ability of recurrent neural networks to capture temporal dependencies.
-* Evaluate model performance using several regression metrics.
-* Assess the model's ability to predict the direction of price movements.
-* Examine model reliability through time-based validation.
+1. **Price forecasting** with recurrent neural networks. A Bidirectional GRU (BiGRU) is the main model, compared with BiLSTM, GRU and LSTM.
+2. **Portfolio optimization** with the Markowitz mean-variance framework, using PyPortfolioOpt and a Ledoit-Wolf shrinkage covariance matrix.
 
 ## Dataset
 
-The dataset contains historical stock price information for Apple Inc. (AAPL), covering the period from 2013 to 2022.
+* **Universe:** 23 large US stocks across six sectors.
 
-* **Data file:** `stock/AAPL.csv`
-* **Asset:** Apple Inc. (AAPL)
-* **Target variable:** Closing price
-* **Period:** 2013–2022
+  | Sector | Tickers |
+  | --- | --- |
+  | Technology | AAPL, ADBE, GOOGL, INTC, MSFT, NVDA |
+  | Finance | BAC, GS, JPM, MA, V |
+  | Healthcare | JNJ, PFE, UNH |
+  | Consumer Discretionary | AMZN, DIS, HD, TSLA, NFLX |
+  | Consumer Staples | KO, PEP, PG |
+  | Communication | CMCSA |
+
+* **Period:** 2 January 2013 to 30 December 2022, daily (2,518 trading days).
+* **Source:** Yahoo Finance, via `yfinance`.
+* **Variable used:** closing price (`Close`).
+
+`stock/` holds one CSV per ticker, and `df_historiques.csv` combines the closing prices of all 23 stocks in a single table.
 
 ## Methodology
 
-### 1. Data Preprocessing
+### 1. Data collection — `data.ipynb`
 
-The following preprocessing steps are applied:
+Downloads the daily prices of the 23 stocks, writes a quality report and builds `df_historiques.csv`.
 
-* Min-Max normalization using `MinMaxScaler`.
-* Construction of sequential input windows.
-* A sliding window of 3 time steps is used to predict the next observation.
+### 2. Forecasting models — `model_bigru.ipynb`, `model_bilstm.ipynb`, `model_gru.ipynb`, `model_lstm.ipynb`
 
-### 2. Model Architecture
+All models are trained on AAPL closing prices:
 
-The forecasting model is based on a Bidirectional GRU architecture.
+* Min-Max normalization (`scaler_minmax_gru.pkl`).
+* Sliding windows of past prices to predict the next day.
+* Chronological 70% / 30% train/test split.
+* Time series cross-validation with 5 folds (`TimeSeriesSplit`).
+* Adam optimizer (learning rate 0.0001), Huber loss, batch size 128, up to 100 epochs, early stopping.
 
-Its main components include:
+BiGRU architecture:
 
-* Two Bidirectional GRU layers with 64 and 256 units.
-* Dropout layers for regularization.
-* Huber loss as the optimization objective.
+| Layer | Units | Activation | Dropout |
+| --- | --- | --- | --- |
+| Bidirectional GRU | 64 | tanh | 0.25 |
+| Bidirectional GRU | 256 | tanh | 0.25 |
+| Dense (output) | 1 | linear | – |
 
-The architecture is designed to learn temporal representations from historical price sequences.
+The comparison models use the same structure, with LSTM or GRU layers in place of the BiGRU layers.
 
-### 3. Model Validation
+Evaluation metrics: MSE, MAE, R², MAPE / SMAPE and Directional Accuracy.
 
-A time series cross-validation strategy with 5 splits is used.
+### 3. Predictions — `predictions.ipynb`, `future_predictions.ipynb`
 
-Unlike conventional random cross-validation, this approach respects the chronological structure of the data.
+* `predictions.ipynb` applies the model trained on AAPL to all 23 stocks and saves the predicted prices to `predictions/`. There is one file per model: `prix_bigru.csv`, `prix_bilstm.csv`, `prix_gru.csv` and `prix_lstm.csv`.
+* `future_predictions.ipynb` produces recursive forecasts for the next 7 business days. It is exploratory and not used in the thesis.
 
-Early stopping is also implemented to monitor model performance during training and help limit overfitting.
+### 4. Portfolio optimization — `optimisation.ipynb`
 
-### 4. Performance Evaluation
+Builds the historical benchmark portfolio:
 
-The model is evaluated using the following metrics:
+* Expected returns: mean historical returns.
+* Covariance: Ledoit-Wolf shrinkage.
+* Objective: maximize the Sharpe ratio, with a risk-free rate of 4%.
+* Constraints: long only, weights summing to 1, at most 20% per asset.
 
-| Metric               | Description                                                                       |
-| -------------------- | --------------------------------------------------------------------------------- |
-| MSE                  | Measures the average squared prediction error.                                    |
-| MAE                  | Measures the average absolute prediction error.                                   |
-| R²                   | Measures the proportion of variance explained by the model.                       |
-| SMAPE                | Measures prediction error in percentage terms.                                    |
-| Directional Accuracy | Measures how often the model correctly predicts the direction of price movements. |
-
-Directional Accuracy is calculated separately on the test set.
+The resulting weights are written to `optimal_portfolio_weights.csv`.
 
 ## Results
 
-The following results were obtained on the test set:
+### BiGRU forecasts (AAPL test set, as saved in `model_bigru.ipynb`)
 
-| Metric               | Result |
-| -------------------- | -----: |
-| R²                   | 0.9885 |
-| MAPE                 |  1.98% |
+| Metric | Result |
+| --- | ---: |
+| MSE | 10.6627 |
+| MAE | 2.4731 |
+| R² | 0.9885 |
+| MAPE | 1.98% |
 | Directional Accuracy | 47.08% |
 
-### Interpretation
+The low error and high R² mostly reflect how close each price is to the previous day's price. The Directional Accuracy of 47% shows that the model does not reliably predict whether the price will go up or down. Accurately estimating price levels and predicting the direction of the market are two different tasks.
 
-The model achieves an R² of 0.9885 and a MAPE of 1.98%, indicating a close fit between predicted and observed stock prices.
+### Historical benchmark portfolio
 
-However, the Directional Accuracy is 47.08%. This result suggests that a low prediction error does not necessarily translate into an ability to anticipate whether the stock price will increase or decrease.
+The maximum Sharpe ratio portfolio puts its weight on eight stocks: NVDA (20%), UNH (20%), JNJ (14.2%), TSLA (13.8%), MSFT (11.4%), NFLX (10.1%), HD (5.5%) and PEP (5.0%).
 
-This distinction is important in financial forecasting, where accurately estimating price levels and predicting market direction are two different tasks.
+`frontieres_efficientes_4_models.png` shows the efficient frontiers and optimal portfolios obtained in the thesis for each model.
 
-## Project Structure
+## Reproducibility notes
+
+* **Missing step:** the code that builds the portfolios from the predicted prices (the BiGRU, BiLSTM, GRU and LSTM portfolios of the thesis) is not included in this repository.
+* **Smoothing:** the thesis describes exponential smoothing (α = 0.5) of the AAPL training data and an additional 64-unit Dense layer. Neither is part of `model_bigru.ipynb`.
+* **Window length:** `model_bigru.ipynb` currently sets `sequence_length = 4`, but its saved outputs, `predictions.ipynb` and the thesis all use a 3-day window.
+* **Thesis figures:** the metrics reported in the thesis (for example a Directional Accuracy of 63.40% for the BiGRU) differ from the outputs saved in the notebooks.
+
+## Project structure
 
 ```text
 .
-├── model_bigru.py          # Main training and evaluation script
-├── model_bigru.pdf         # Technical report
-├── model_bigru.keras       # Saved trained model
-├── scaler_minmax_gru.pkl   # Saved MinMaxScaler
-├── stock/
-│   └── AAPL.csv            # Historical stock price data
+├── data.ipynb                          # Data download and df_historiques.csv
+├── model_bigru.ipynb / .keras          # BiGRU model (main model)
+├── model_bilstm.ipynb / .keras         # BiLSTM model
+├── model_gru.ipynb / .keras            # GRU model
+├── model_lstm.ipynb / .keras           # LSTM model
+├── scaler_minmax_gru.pkl               # Fitted MinMaxScaler
+├── predictions.ipynb                   # Predicted prices for all stocks
+├── future_predictions.ipynb            # 7-day recursive forecasts
+├── optimisation.ipynb                  # Historical Markowitz portfolio
+├── model_bigru.pdf                     # Technical report
+├── frontieres_efficientes_4_models.png # Efficient frontiers (thesis figure)
+├── df_historiques.csv                  # Closing prices, 23 stocks
+├── stock/                              # One CSV per stock
+├── predictions/                        # Predicted prices per model
 └── README.md
 ```
 
-## Installation and Usage
+## Installation and usage
 
-### Requirements
-
-* Python 3.x
-* TensorFlow / Keras
-* Scikit-learn
-* Pandas
-* Matplotlib
-* Joblib
-
-### Installation
-
-Install the required dependencies:
+Requirements: Python 3.x.
 
 ```bash
-pip install tensorflow scikit-learn pandas matplotlib joblib
+pip install tensorflow scikit-learn pandas numpy matplotlib joblib yfinance PyPortfolioOpt
 ```
 
-### Run the project
+Suggested order:
 
-Execute the main Python script:
+1. `data.ipynb` (optional, since the data is already in `stock/` and `df_historiques.csv`)
+2. `model_bigru.ipynb`, then the other model notebooks
+3. `predictions.ipynb`
+4. `optimisation.ipynb`
 
-```bash
-python model_bigru.py
-```
+## Feedback and contributions
 
-## Limitations and Future Work
-
-Although the model achieves a high R² and a relatively low MAPE, several aspects deserve further investigation.
-
-Potential directions for future work include:
-
-* Comparing BiGRU with other recurrent architectures, such as LSTM and standard GRU.
-* Investigating the influence of the input window size on forecasting performance.
-* Evaluating the impact of additional financial indicators and market variables.
-* Improving directional forecasting performance.
-* Studying model robustness across different stocks and market periods.
-* Comparing deep learning models with statistical forecasting approaches.
-
-These directions could help determine whether the observed performance generalizes beyond the selected dataset.
-
-## Feedback and Contributions
-
-This project is an academic research initiative. I welcome feedback, critical reviews, and suggestions for methodological or technical improvements.
-
-Feel free to open an Issue to discuss the methodology, implementation, or experimental results.
+This is an academic research project. Feedback, critical reviews and suggestions for methodological or technical improvements are welcome. Feel free to open an Issue to discuss them.
 
 ## Author
 
