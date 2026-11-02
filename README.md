@@ -28,15 +28,15 @@ The project combines two steps:
 * **Source:** Yahoo Finance, via `yfinance`.
 * **Variable used:** closing price (`Close`).
 
-`stock/` holds one CSV per ticker, and `df_historiques.csv` combines the closing prices of all 23 stocks in a single table.
+`data/raw/` holds one CSV per ticker, and `data/processed/df_historiques.csv` combines the closing prices of all 23 stocks in a single table.
 
 ## Methodology
 
-### 1. Data collection — `data.ipynb`
+### 1. Data collection — `01_data_collection.ipynb`
 
 Downloads the daily prices of the 23 stocks, writes a quality report and builds `df_historiques.csv`.
 
-### 2. Forecasting models — `model_bigru.ipynb`, `model_bilstm.ipynb`, `model_gru.ipynb`, `model_lstm.ipynb`
+### 2. Forecasting models — `02_model_bigru.ipynb` to `05_model_lstm.ipynb`
 
 All models are trained on AAPL closing prices:
 
@@ -60,12 +60,12 @@ The comparison models use the same structure, with LSTM or GRU layers in place o
 
 Evaluation metrics: MSE, MAE, R², MAPE / SMAPE and Directional Accuracy.
 
-### 3. Predictions — `predictions.ipynb`, `future_predictions.ipynb`
+### 3. Predictions — `06_predictions.ipynb`, `08_future_predictions.ipynb`
 
-* `predictions.ipynb` applies the models trained on AAPL to all 23 stocks and saves the predicted prices to `predictions/`. There is one file per model: `prix_bigru.csv`, `prix_bilstm.csv`, `prix_gru.csv` and `prix_lstm.csv`. These predictions are made on **raw, unsmoothed prices**, including 22 stocks the models never saw during training.
-* `future_predictions.ipynb` produces recursive forecasts for the next 7 business days. It is exploratory and not used in the thesis.
+* `06_predictions.ipynb` applies the models trained on AAPL to all 23 stocks and saves the predicted prices to `data/predictions/`. There is one file per model: `prix_bigru.csv`, `prix_bilstm.csv`, `prix_gru.csv` and `prix_lstm.csv`. These predictions are made on **raw, unsmoothed prices**, including 22 stocks the models never saw during training.
+* `08_future_predictions.ipynb` produces recursive forecasts for the next 7 business days. It is exploratory and not used in the thesis.
 
-### 4. Portfolio optimization — `optimisation.ipynb`
+### 4. Portfolio optimization — `07_portfolio_optimization.ipynb`
 
 Builds and compares portfolios from historical prices and from the prices predicted by each model:
 
@@ -74,7 +74,7 @@ Builds and compares portfolios from historical prices and from the prices predic
 * Objectives: maximum Sharpe ratio and minimum variance.
 * Constraints: long only, weights summing to 1, at most 20% per asset.
 
-The notebook also plots the efficient frontiers of the five portfolios (`frontieres_efficientes_4_models.png`) and the comparison of model metrics.
+The notebook also plots the efficient frontiers of the five portfolios (`results/figures/frontieres_efficientes_4_models.png`) and the comparison of model metrics.
 
 ## Results
 
@@ -89,14 +89,14 @@ The notebook also plots the efficient frontiers of the five portfolios (`frontie
 
 BiGRU time series cross-validation (5 folds): MSE 0.2585 ± 0.1818, MAE 0.3636 ± 0.1298, R² 0.9883 ± 0.0067.
 
-### Portfolios (as saved in `optimisation.ipynb`)
+### Portfolios (as saved in `07_portfolio_optimization.ipynb`)
 
 | Portfolio | Objective | Expected return | Annual volatility | Sharpe ratio |
 | --- | --- | ---: | ---: | ---: |
 | Historical | Minimum variance | 12.1% | 14.7% | 0.55 |
 | BiGRU | Maximum Sharpe | 34.0% | 12.5% | 2.39 |
 
-`frontieres_efficientes_4_models.png` shows the efficient frontiers and optimal portfolios for each model.
+![Efficient frontiers for each portfolio](results/figures/frontieres_efficientes_4_models.png)
 
 ## Reproducibility notes
 
@@ -107,21 +107,29 @@ BiGRU time series cross-validation (5 folds): MSE 0.2585 ± 0.1818, MAE 0.3636 �
 
 ```text
 .
-├── data.ipynb                          # Data download and df_historiques.csv
-├── model_bigru.ipynb / .keras          # BiGRU model (main model)
-├── model_bilstm.ipynb / .keras         # BiLSTM model
-├── model_gru.ipynb / .keras            # GRU model
-├── model_lstm.ipynb / .keras           # LSTM model
-├── scaler_minmax_gru.pkl               # Fitted MinMaxScaler
-├── predictions.ipynb                   # Predicted prices for all stocks
-├── future_predictions.ipynb            # 7-day recursive forecasts
-├── optimisation.ipynb                  # Markowitz portfolios (historical and model-based)
-├── model_bigru.pdf                     # Technical report
-├── frontieres_efficientes_4_models.png # Efficient frontiers (thesis figure)
-├── requirements.txt                    # Python dependencies
-├── df_historiques.csv                  # Closing prices, 23 stocks
-├── stock/                              # One CSV per stock
-├── predictions/                        # Predicted prices per model
+├── data/
+│   ├── raw/                     # Daily prices, one CSV per stock (23 files)
+│   ├── processed/
+│   │   └── df_historiques.csv   # Closing prices of the 23 stocks in one table
+│   └── predictions/             # Prices predicted by each model
+├── models/
+│   ├── model_bigru.keras        # BiGRU (main model)
+│   ├── model_bilstm.keras
+│   ├── model_gru.keras
+│   ├── model_lstm.keras
+│   └── scaler_minmax_gru.pkl    # Fitted MinMaxScaler
+├── notebooks/
+│   ├── 01_data_collection.ipynb
+│   ├── 02_model_bigru.ipynb
+│   ├── 03_model_bilstm.ipynb
+│   ├── 04_model_gru.ipynb
+│   ├── 05_model_lstm.ipynb
+│   ├── 06_predictions.ipynb
+│   ├── 07_portfolio_optimization.ipynb
+│   └── 08_future_predictions.ipynb
+├── results/
+│   └── figures/                 # Figures used in the thesis
+├── requirements.txt
 └── README.md
 ```
 
@@ -130,17 +138,17 @@ BiGRU time series cross-validation (5 folds): MSE 0.2585 ± 0.1818, MAE 0.3636 �
 Requirements: Python 3.x.
 
 ```bash
-pip install tensorflow scikit-learn pandas numpy matplotlib seaborn plotly joblib yfinance PyPortfolioOpt
+git clone https://github.com/Nayer878/stock-price-bigru.git
+cd stock-price-bigru
+pip install -r requirements.txt
 ```
 
-`requirements.txt` lists only the dependencies of the model notebooks.
+The notebooks use paths relative to the `notebooks/` folder, so run them from there. Suggested order:
 
-Suggested order:
-
-1. `data.ipynb` (optional, since the data is already in `stock/` and `df_historiques.csv`)
-2. `model_bigru.ipynb`, then the other model notebooks
-3. `predictions.ipynb`
-4. `optimisation.ipynb`
+1. `01_data_collection.ipynb` (optional, since the data is already in `data/`)
+2. `02_model_bigru.ipynb`, then the other model notebooks
+3. `06_predictions.ipynb`
+4. `07_portfolio_optimization.ipynb`
 
 ## Feedback and contributions
 
