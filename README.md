@@ -40,8 +40,9 @@ Downloads the daily prices of the 23 stocks, writes a quality report and builds 
 
 All models are trained on AAPL closing prices:
 
+* Exponential smoothing of the AAPL series: S_t = α·Y_t + (1 − α)·S_{t−1}, with α = 0.5.
 * Min-Max normalization (`scaler_minmax_gru.pkl`).
-* Sliding windows of past prices to predict the next day.
+* Sliding windows of 3 days to predict the 4th day.
 * Chronological 70% / 30% train/test split.
 * Time series cross-validation with 5 folds (`TimeSeriesSplit`).
 * Adam optimizer (learning rate 0.0001), Huber loss, batch size 128, up to 100 epochs, early stopping.
@@ -52,6 +53,7 @@ BiGRU architecture:
 | --- | --- | --- | --- |
 | Bidirectional GRU | 64 | tanh | 0.25 |
 | Bidirectional GRU | 256 | tanh | 0.25 |
+| Dense | 64 | linear | – |
 | Dense (output) | 1 | linear | – |
 
 The comparison models use the same structure, with LSTM or GRU layers in place of the BiGRU layers.
@@ -60,7 +62,7 @@ Evaluation metrics: MSE, MAE, R², MAPE / SMAPE and Directional Accuracy.
 
 ### 3. Predictions — `predictions.ipynb`, `future_predictions.ipynb`
 
-* `predictions.ipynb` applies the model trained on AAPL to all 23 stocks and saves the predicted prices to `predictions/`. There is one file per model: `prix_bigru.csv`, `prix_bilstm.csv`, `prix_gru.csv` and `prix_lstm.csv`.
+* `predictions.ipynb` applies the models trained on AAPL to all 23 stocks and saves the predicted prices to `predictions/`. There is one file per model: `prix_bigru.csv`, `prix_bilstm.csv`, `prix_gru.csv` and `prix_lstm.csv`. These predictions are made on **raw, unsmoothed prices**, including 22 stocks the models never saw during training.
 * `future_predictions.ipynb` produces recursive forecasts for the next 7 business days. It is exploratory and not used in the thesis.
 
 ### 4. Portfolio optimization — `optimisation.ipynb`
@@ -76,17 +78,16 @@ The notebook also plots the efficient frontiers of the five portfolios (`frontie
 
 ## Results
 
-### BiGRU forecasts (AAPL test set, as saved in `model_bigru.ipynb`)
+### Forecasting models (AAPL test set)
 
-| Metric | Result |
-| --- | ---: |
-| MSE | 10.6627 |
-| MAE | 2.4731 |
-| R² | 0.9885 |
-| MAPE | 1.98% |
-| Directional Accuracy | 47.08% |
+| Model | MSE | MAE | MAPE | R² | Directional Accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| **BiGRU** | **5.5136** | **1.7896** | **1.43%** | **0.9940** | **63.40%** |
+| BiLSTM | 5.6206 | 1.8049 | 1.45% | 0.9939 | 63.13% |
+| GRU | 7.2163 | 2.0300 | 1.62% | 0.9922 | 61.27% |
+| LSTM | 8.4060 | 2.1942 | 1.75% | 0.9909 | 57.82% |
 
-The low error and high R² mostly reflect how close each price is to the previous day's price. The Directional Accuracy of 47% shows that the model does not reliably predict whether the price will go up or down. Accurately estimating price levels and predicting the direction of the market are two different tasks.
+BiGRU time series cross-validation (5 folds): MSE 0.2585 ± 0.1818, MAE 0.3636 ± 0.1298, R² 0.9883 ± 0.0067.
 
 ### Portfolios (as saved in `optimisation.ipynb`)
 
@@ -100,9 +101,7 @@ The low error and high R² mostly reflect how close each price is to the previou
 ## Reproducibility notes
 
 * **Expected returns:** the model-based portfolios use returns computed from predicted prices only. The blend μ = λ·μ_DL + (1−λ)·μ_hist described in the thesis is not implemented.
-* **Smoothing:** the thesis describes exponential smoothing (α = 0.5) of the AAPL training data and an additional 64-unit Dense layer. Neither is part of `model_bigru.ipynb`.
-* **Window length:** `model_bigru.ipynb` currently sets `sequence_length = 4`, but its saved outputs, `predictions.ipynb` and the thesis all use a 3-day window.
-* **Thesis figures:** the metrics reported in the thesis (for example a Directional Accuracy of 63.40% for the BiGRU) differ from the outputs saved in the notebooks.
+* **Smoothing and evaluation:** smoothing is applied to the AAPL series used to build the models, so the test metrics above are computed on smoothed AAPL prices. The predictions used for the portfolios are made on raw prices.
 
 ## Project structure
 
@@ -119,6 +118,7 @@ The low error and high R² mostly reflect how close each price is to the previou
 ├── optimisation.ipynb                  # Markowitz portfolios (historical and model-based)
 ├── model_bigru.pdf                     # Technical report
 ├── frontieres_efficientes_4_models.png # Efficient frontiers (thesis figure)
+├── requirements.txt                    # Python dependencies
 ├── df_historiques.csv                  # Closing prices, 23 stocks
 ├── stock/                              # One CSV per stock
 ├── predictions/                        # Predicted prices per model
@@ -130,8 +130,10 @@ The low error and high R² mostly reflect how close each price is to the previou
 Requirements: Python 3.x.
 
 ```bash
-pip install tensorflow scikit-learn pandas numpy matplotlib joblib yfinance PyPortfolioOpt
+pip install tensorflow scikit-learn pandas numpy matplotlib seaborn plotly joblib yfinance PyPortfolioOpt
 ```
+
+`requirements.txt` lists only the dependencies of the model notebooks.
 
 Suggested order:
 
