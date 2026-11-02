@@ -65,14 +65,14 @@ Evaluation metrics: MSE, MAE, R², MAPE / SMAPE and Directional Accuracy.
 
 ### 4. Portfolio optimization — `optimisation.ipynb`
 
-Builds the historical benchmark portfolio:
+Builds and compares portfolios from historical prices and from the prices predicted by each model:
 
-* Expected returns: mean historical returns.
+* Expected returns: mean returns computed from historical prices (benchmark) or from predicted prices (BiGRU, BiLSTM, GRU, LSTM).
 * Covariance: Ledoit-Wolf shrinkage.
-* Objective: maximize the Sharpe ratio, with a risk-free rate of 4%.
+* Objectives: maximum Sharpe ratio and minimum variance.
 * Constraints: long only, weights summing to 1, at most 20% per asset.
 
-The resulting weights are written to `optimal_portfolio_weights.csv`.
+The notebook also plots the efficient frontiers of the five portfolios (`frontieres_efficientes_4_models.png`) and the comparison of model metrics.
 
 ## Results
 
@@ -88,15 +88,18 @@ The resulting weights are written to `optimal_portfolio_weights.csv`.
 
 The low error and high R² mostly reflect how close each price is to the previous day's price. The Directional Accuracy of 47% shows that the model does not reliably predict whether the price will go up or down. Accurately estimating price levels and predicting the direction of the market are two different tasks.
 
-### Historical benchmark portfolio
+### Portfolios (as saved in `optimisation.ipynb`)
 
-The maximum Sharpe ratio portfolio puts its weight on eight stocks: NVDA (20%), UNH (20%), JNJ (14.2%), TSLA (13.8%), MSFT (11.4%), NFLX (10.1%), HD (5.5%) and PEP (5.0%).
+| Portfolio | Objective | Expected return | Annual volatility | Sharpe ratio |
+| --- | --- | ---: | ---: | ---: |
+| Historical | Minimum variance | 12.1% | 14.7% | 0.55 |
+| BiGRU | Maximum Sharpe | 34.0% | 12.5% | 2.39 |
 
-`frontieres_efficientes_4_models.png` shows the efficient frontiers and optimal portfolios obtained in the thesis for each model.
+`frontieres_efficientes_4_models.png` shows the efficient frontiers and optimal portfolios for each model.
 
 ## Reproducibility notes
 
-* **Missing step:** the code that builds the portfolios from the predicted prices (the BiGRU, BiLSTM, GRU and LSTM portfolios of the thesis) is not included in this repository.
+* **Expected returns:** the model-based portfolios use returns computed from predicted prices only. The blend μ = λ·μ_DL + (1−λ)·μ_hist described in the thesis is not implemented.
 * **Smoothing:** the thesis describes exponential smoothing (α = 0.5) of the AAPL training data and an additional 64-unit Dense layer. Neither is part of `model_bigru.ipynb`.
 * **Window length:** `model_bigru.ipynb` currently sets `sequence_length = 4`, but its saved outputs, `predictions.ipynb` and the thesis all use a 3-day window.
 * **Thesis figures:** the metrics reported in the thesis (for example a Directional Accuracy of 63.40% for the BiGRU) differ from the outputs saved in the notebooks.
@@ -113,7 +116,7 @@ The maximum Sharpe ratio portfolio puts its weight on eight stocks: NVDA (20%), 
 ├── scaler_minmax_gru.pkl               # Fitted MinMaxScaler
 ├── predictions.ipynb                   # Predicted prices for all stocks
 ├── future_predictions.ipynb            # 7-day recursive forecasts
-├── optimisation.ipynb                  # Historical Markowitz portfolio
+├── optimisation.ipynb                  # Markowitz portfolios (historical and model-based)
 ├── model_bigru.pdf                     # Technical report
 ├── frontieres_efficientes_4_models.png # Efficient frontiers (thesis figure)
 ├── df_historiques.csv                  # Closing prices, 23 stocks
