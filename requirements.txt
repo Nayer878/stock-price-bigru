@@ -1,14 +1,16 @@
-# Dépendances du projet
-# Installez-les dans un environnement virtuel pour garantir la reproductibilité
+﻿# Dépendances du projet (Python 3.12)
+# Versions figées et compatibles entre elles. TensorFlow, Keras et scikit-learn
+# correspondent aux versions avec lesquelles les modèles et le scaler de models/
+# ont été enregistrés. Installez-les dans un environnement virtuel.
 
-numpy
-pandas
-matplotlib
-seaborn
-plotly
-scikit-learn
-tensorflow
-keras
-joblib
-yfinance
-PyPortfolioOpt
+tensorflow==2.18.0
+keras==3.9.0
+numpy==2.0.2
+pandas==2.2.3
+scikit-learn==1.5.2
+joblib==1.4.2
+matplotlib==3.9.2
+seaborn==0.13.2
+plotly==5.24.1
+PyPortfolioOpt==1.5.6
+yfinance==1.2.0

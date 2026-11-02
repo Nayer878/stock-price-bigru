@@ -62,7 +62,7 @@ Evaluation metrics: MSE, MAE, R², MAPE / SMAPE and Directional Accuracy.
 
 ### 3. Predictions — `06_predictions.ipynb`, `08_future_predictions.ipynb`
 
-* `06_predictions.ipynb` applies the models trained on AAPL to all 23 stocks and saves the predicted prices to `data/predictions/`. There is one file per model: `prix_bigru.csv`, `prix_bilstm.csv`, `prix_gru.csv` and `prix_lstm.csv`. These predictions are made on **raw, unsmoothed prices**, including 22 stocks the models never saw during training.
+* `06_predictions.ipynb` applies each of the four models trained on AAPL to all 23 stocks and saves the predicted prices to `data/predictions/`. There is one file per model: `prix_bigru.csv`, `prix_bilstm.csv`, `prix_gru.csv` and `prix_lstm.csv`. These predictions are made on **raw, unsmoothed prices**, including 22 stocks the models never saw during training.
 * `08_future_predictions.ipynb` produces recursive forecasts for the next 7 business days. It is exploratory and not used in the thesis.
 
 ### 4. Portfolio optimization — `07_portfolio_optimization.ipynb`
@@ -143,10 +143,24 @@ cd stock-price-bigru
 pip install -r requirements.txt
 ```
 
-The notebooks use paths relative to the `notebooks/` folder, so run them from there. Suggested order:
+The pinned versions require Python 3.12. The notebooks use paths relative to the `notebooks/` folder, so run them from there.
 
-1. `01_data_collection.ipynb` (optional, since the data is already in `data/`)
-2. `02_model_bigru.ipynb`, then the other model notebooks
+### Reproducing the thesis results
+
+The trained models in `models/` and the data in `data/` are the ones used in the thesis. To reproduce the results exactly, start from them:
+
+1. `06_predictions.ipynb` regenerates the predicted prices of the four models from the saved models. The output is identical to the files in `data/predictions/`.
+2. `07_portfolio_optimization.ipynb` builds the portfolios from these predictions.
+
+Two steps give results that are close to, but not identical with, the thesis:
+
+* **Retraining a model** (`02_model_bigru.ipynb` to `05_model_lstm.ipynb`) overwrites the saved model with a new one. TensorFlow training is not fully deterministic, even with fixed random seeds, so the metrics will differ slightly from those reported above.
+* **Downloading the data again** (`01_data_collection.ipynb`) overwrites `data/raw/` and `data/processed/`. Yahoo Finance adjusts past prices for dividends and splits, so a new download does not exactly match the data used in the thesis.
+
+### Full pipeline
+
+1. `01_data_collection.ipynb`
+2. `02_model_bigru.ipynb` to `05_model_lstm.ipynb`
 3. `06_predictions.ipynb`
 4. `07_portfolio_optimization.ipynb`
 
