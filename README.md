@@ -129,6 +129,7 @@ BiGRU time series cross-validation (5 folds): MSE 0.2585 ± 0.1818, MAE 0.3636 �
 │   └── 08_future_predictions.ipynb
 ├── results/
 │   └── figures/                 # Figures used in the thesis
+├── LICENSE
 ├── requirements.txt
 └── README.md
 ```
@@ -167,6 +168,12 @@ Two steps give results that are close to, but not identical with, the thesis:
 ## Feedback and contributions
 
 This is an academic research project. Feedback, critical reviews and suggestions for methodological or technical improvements are welcome. Feel free to open an Issue to discuss them.
+
+## License
+
+The code is released under the [MIT License](LICENSE).
+
+The price data in `data/` comes from Yahoo Finance and is included for academic reproducibility only. It is not covered by the MIT License and remains subject to Yahoo's terms of use.
 
 ## Author
 
